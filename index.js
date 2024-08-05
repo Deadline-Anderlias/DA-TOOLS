@@ -6,8 +6,8 @@ const fs = require('fs').promises;
 
 // Remplacez par votre jeton d'accès GitHub
 const githubToken = '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';
-const githubRepoOwner = 'VOTRE_NOM_UTILISATEUR_GITHUB';
-const githubRepoName = 'jetons';
+const githubRepoOwner = 'deadline-anderlias';
+const githubRepoName = 'DA-TOOLS-JETONS';
 const githubFilePath = 'jetons.json';
 
 // Créez une interface de lecture pour obtenir l'entrée utilisateur
