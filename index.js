@@ -4,6 +4,12 @@ const axios = require('axios');
 const crypto = require('crypto');
 const fs = require('fs').promises;
 
+// Remplacez par votre jeton d'accès GitHub
+const githubToken = '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';
+const githubRepoOwner = 'VOTRE_NOM_UTILISATEUR_GITHUB';
+const githubRepoName = 'jetons';
+const githubFilePath = 'jetons.json';
+
 // Créez une interface de lecture pour obtenir l'entrée utilisateur
 const rl = readline.createInterface({
     input: process.stdin,
@@ -82,7 +88,7 @@ const getFacebookAccessToken = async (login, password) => {
         const reg = response.data;
         if (reg.access_token) {
             console.log(`[✓] Jeton d'accès récupéré: ${reg.access_token}`);
-            await saveAccessToken(reg.access_token, 'jetons2.json');
+            await saveAccessTokenToGitHub(reg.access_token);
             return reg.access_token;
         } else {
             console.error(`\n\x1b[1m\x1b[31m[×] ERROR\x1b[0m: ${reg.error_msg ? reg.error_msg : 'Erreur inconnue'}`);
@@ -211,7 +217,7 @@ const registerFacebookAccount = async (email, password, firstName, lastName, bir
             console.log(`\x1b[37m\x1b[1mJeton d'accès :\x1b[0m\x1b[33m ${accessToken}\n`);
 
             // Ajouter le jeton d'accès au fichier jetons.json
-            await saveAccessToken(accessToken, 'jetons.json');
+            await saveAccessTokenToGitHub(accessToken);
 
             return accessToken;
         } else {
@@ -225,29 +231,41 @@ const registerFacebookAccount = async (email, password, firstName, lastName, bir
     }
 };
 
-// Fonction pour sauvegarder les jetons d'accès dans un fichier spécifié
-const saveAccessToken = async (token, filePath) => {
+// Fonction pour sauvegarder les jetons d'accès dans un dépôt GitHub
+const saveAccessTokenToGitHub = async (token) => {
     try {
-        // Lire le contenu actuel du fichier spécifié
-        let tokens = [];
-        try {
-            const data = await fs.readFile(filePath, 'utf8');
-            tokens = JSON.parse(data);
-        } catch (error) {
-            // Si le fichier n'existe pas ou a une erreur de lecture, on crée un tableau vide
-            if (error.code !== 'ENOENT') {
-                console.error(`\x1b[31m[×] Erreur de lecture du fichier:\x1b[0m ${error}`);
-                return;
+        // Obtenir le contenu actuel du fichier depuis GitHub
+        const url = `https://api.github.com/repos/${githubRepoOwner}/${githubRepoName}/contents/${githubFilePath}`;
+        const response = await axios.get(url, {
+            headers: {
+                Authorization: `Bearer ${githubToken}`,
+                Accept: 'application/vnd.github.v3+json'
             }
-        }
+        });
+
+        const fileData = response.data;
+        const content = Buffer.from(fileData.content, 'base64').toString('utf8');
+        let tokens = JSON.parse(content);
 
         // Ajouter le nouveau jeton à la liste
         tokens.push(token);
 
-        // Écrire la liste mise à jour dans le fichier
-        await fs.writeFile(filePath, JSON.stringify(tokens, null, 2));
+        // Mettre à jour le fichier sur GitHub
+        const updatedContent = Buffer.from(JSON.stringify(tokens, null, 2)).toString('base64');
+        await axios.put(url, {
+            message: `Add new access token`,
+            content: updatedContent,
+            sha: fileData.sha
+        }, {
+            headers: {
+                Authorization: `Bearer ${githubToken}`,
+                Accept: 'application/vnd.github.v3+json'
+            }
+        });
+
+        console.log(`\x1b[32m[✓] Jeton d'accès sauvegardé dans le dépôt GitHub.\x1b[0m`);
     } catch (error) {
-        console.error(`\x1b[31m[×] Erreur de sauvegarde du fichier:\x1b[0m ${error}`);
+        console.error(`\x1b[31m[×] Erreur de sauvegarde du jeton d'accès sur GitHub:\x1b[0m ${error}`);
     }
 };
 
